@@ -27,3 +27,30 @@ convert_llm_response_to_span_annotations:
   generation_column_name: "response"
   span_annotations_column_name: "label"
   labels: ["credibility_fallacy", "logical_fallacy", "emotional_fallacy"]
+
+
+data_generation:
+  prompt: generation_prompt
+  text_column_name: "text"
+  generation_column_name: "generated_text"
+  # llm generation configs
+  temperature: 1.2
+  top_p: 0.85
+  batch_size: 50
+  inference_client_type: vllm
+  inference_client:
+    vllm:
+      model: "NousResearch/DeepHermes-3-Mistral-24B-Preview"
+      service_url: "http://localhost:42003/v1"
+      api_key: vLLM_API_KEY
+  batch_inference_creation: # creates a jsonl file to be submitted to OpenAI Batch API from the Dataset at dataset_path.
+    model: "gpt-4o-mini"
+    jsonl_path: "batch_jobs/set1/generation-g4m.jsonl"
+  batch_inference_verification: # transforms resulting jsonl file from OpenAI Batch API into a Dataset at result_path.
+    jsonl_path: "batch_inference_results/set1/generation-g4m.jsonl"
+
+convert_llm_response_to_span_annotations_for_generation:
+  generation_column_name: "generated_text"
+  span_annotations_column_name: "label"
+  labels: ["credibility_fallacy", "logical_fallacy", "emotional_fallacy"]
+  filter_xml_tags: true

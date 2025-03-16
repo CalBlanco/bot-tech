@@ -17,7 +17,14 @@ from tqdm.auto import tqdm
 from inference_pipelines.prompts.annotation_guidelines import ANNOTATION_GUIDELINES
 from inference_pipelines.prompts.annotation_prompt import ANNOTATION_PROMPT
 from inference_pipelines.prompts.sample_annotations import FEW_SHOT_EXAMPLES
-from inference_pipelines.prompts.system_prompt import ANNOTATION_SYSTEM_PROMPT
+from inference_pipelines.prompts.system_prompt import (
+    ANNOTATION_SYSTEM_PROMPT,
+    GENERATION_SYSTEM_PROMPT,
+)
+from inference_pipelines.prompts.generation_samples import GENERATION_SAMPLES_70_30
+from inference_pipelines.prompts.generation_prompt_template import (
+    GENERATION_PROMPT_TEMPLATE,
+)
 
 # Create logs directory if it doesn't exist
 Path("logs").mkdir(exist_ok=True)
@@ -63,7 +70,7 @@ def select_prompt(prompt_to_use: str, text: str, **kwargs) -> List[Dict[str, str
     # Dictionary mapping prompt names to functions
     prompt_functions = {
         "annotation_prompt": annotation_prompt,
-        # add more prompts here
+        "generation_prompt": generation_prompt,
     }
 
     if prompt_to_use not in prompt_functions:
@@ -75,6 +82,7 @@ def select_prompt(prompt_to_use: str, text: str, **kwargs) -> List[Dict[str, str
     return prompt_functions[prompt_to_use](text, **kwargs)
 
 
+# prompt to annotate fallacies in text
 def annotation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
     """
     Create an annotation prompt with the guidelines and prompt template.
@@ -99,6 +107,28 @@ def annotation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
 
     return [
         {"role": "system", "content": ANNOTATION_SYSTEM_PROMPT},
+        {"role": "user", "content": content},
+    ]
+
+
+# prompt to generate text with fallacies
+def generation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
+    if isinstance(text, list):
+        text = json.dumps(text)
+
+    prompt_template = GENERATION_PROMPT_TEMPLATE
+
+    # replace few shot samples placeholder with few shot samples
+    content = prompt_template.replace("{{FEW_SHOT_SAMPLES}}", GENERATION_SAMPLES_70_30)
+
+    # replace fallacies placeholder with fallacies
+    content = content.replace("{{FALLACIES}}", text)
+
+    # replace num samples placeholder with num samples
+    content = content.replace("{{NUM_SAMPLES}}", "1")
+
+    return [
+        {"role": "system", "content": GENERATION_SYSTEM_PROMPT},
         {"role": "user", "content": content},
     ]
 
@@ -673,6 +703,18 @@ def main():
         required=True,
         help="Config section to use from inference_configs.yaml (e.g., data_annotation)",
     )
+    parser.add_argument(
+        "--input-dataset-path",
+        type=str,
+        required=True,
+        help="Path to input dataset. Overrides config value if provided.",
+    )
+    parser.add_argument(
+        "--result-dataset-path",
+        type=str,
+        required=True,
+        help="Path to save result dataset. Overrides config value if provided.",
+    )
     args = parser.parse_args()
 
     # Create logs directory if it doesn't exist
@@ -687,6 +729,12 @@ def main():
         raise ValueError(f"Config section '{args.section}' not found in {config_path}")
 
     config = all_configs[args.section]
+
+    # Override config values with command line arguments if provided
+    if args.input_dataset_path:
+        config["input_dataset_path"] = args.input_dataset_path
+    if args.result_dataset_path:
+        config["result_dataset_path"] = args.result_dataset_path
 
     # Check required config values
     required_fields = [
