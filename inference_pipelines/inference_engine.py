@@ -24,6 +24,7 @@ from inference_pipelines.prompts.system_prompt import (
 from inference_pipelines.prompts.generation_samples import GENERATION_SAMPLES_70_30
 from inference_pipelines.prompts.generation_prompt_template import (
     GENERATION_PROMPT_TEMPLATE,
+    FALLACY_DEFINITIONS,
 )
 
 # Create logs directory if it doesn't exist
@@ -117,6 +118,9 @@ def generation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
         text = json.dumps(text)
 
     prompt_template = GENERATION_PROMPT_TEMPLATE
+
+    # replace fallacy definitions placeholder with fallacy definitions
+    content = prompt_template.replace("{{FALLACY_DEFINITIONS}}", FALLACY_DEFINITIONS)
 
     # replace few shot samples placeholder with few shot samples
     content = prompt_template.replace("{{FEW_SHOT_SAMPLES}}", GENERATION_SAMPLES_70_30)
