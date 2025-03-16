@@ -34,8 +34,8 @@ data_generation:
   text_column_name: "text"
   generation_column_name: "generated_text"
   # llm generation configs
-  temperature: 1.2
-  top_p: 0.85
+  temperature: 1.1
+  top_p: 0.9
   batch_size: 50
   inference_client_type: vllm
   inference_client:

@@ -9,9 +9,9 @@ GENERATION_OUTPUTS_DIR="generation_outputs"
 INFERENCE_PIPELINES_DIR="inference_pipelines"
 
 # Dataset paths
-GENERATION_DATASET="generation_inputs_70_30"
+GENERATION_DATASET="generation_inputs_70_30_v3"
 DATASET_PATH="datasets/${GENERATION_DATASET}"
-OUTPUT_CSV="${GENERATION_OUTPUTS_DIR}/${GENERATION_DATASET}.csv"
+OUTPUT_CSV="${GENERATION_OUTPUTS_DIR}/${GENERATION_DATASET}.jsonl"
 
 # Config files
 CONFIG_FILE="${INFERENCE_PIPELINES_DIR}/inference_configs.yaml"
