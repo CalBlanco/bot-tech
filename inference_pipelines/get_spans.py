@@ -142,11 +142,17 @@ def process_dataset(config):
         # Convert to spans
         spans = convert_text_to_span_annotations(annotated_text, labels)
         # Add to dataframe
-        df.at[idx, span_col] = (spans,)
+        df.at[idx, span_col] = json.dumps(spans)
 
-    df[span_col] = df[span_col].apply(
-        lambda x: x[0] if isinstance(x, tuple) or isinstance(x, list) else x
-    )
+    # filter out all the xml tags
+    def filter_xml_tags(text):
+        for label in labels:
+            text = text.replace(f"<{label}>", "").replace(f"</{label}>", "")
+        return text
+
+    if config["filter_xml_tags"]:
+        df[gen_col] = df[gen_col].apply(filter_xml_tags)
+
     # Save the processed dataset
     save_dataset(df, config["result_dataset_path"])
 
@@ -258,10 +264,28 @@ def main():
         default="convert_llm_response_to_span_annotations",
         help="Section in the config file to use",
     )
+    parser.add_argument(
+        "--input_path",
+        type=str,
+        required=True,
+        help="Path to input dataset. Overrides config value if provided.",
+    )
+    parser.add_argument(
+        "--output_path",
+        type=str,
+        required=True,
+        help="Path to save result dataset. Overrides config value if provided.",
+    )
     args = parser.parse_args()
 
     # Load configuration
     config = load_config(args.config, args.section)
+
+    # Override config values with command line arguments if provided
+    if args.input_path:
+        config["input_dataset_path"] = args.input_path
+    if args.output_path:
+        config["result_dataset_path"] = args.output_path
 
     # Check if required config values are set
     if config["input_dataset_path"] is None:
