@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+from functools import partial
 import logging
 import math
 import os
@@ -16,12 +17,23 @@ import pandas as pd
 from tqdm.auto import tqdm
 from inference_pipelines.prompts.annotation_guidelines import ANNOTATION_GUIDELINES
 from inference_pipelines.prompts.annotation_prompt import ANNOTATION_PROMPT
-from inference_pipelines.prompts.sample_annotations import FEW_SHOT_EXAMPLES
+from inference_pipelines.prompts.sample_annotations import (
+    FEW_SHOT_EXAMPLES,
+    FEW_SHOT_EXAMPLES_70_30,
+    FEW_SHOT_EXAMPLES_00,
+    FEW_SHOT_EXAMPLES_80_20,
+    FEW_SHOT_EXAMPLES_90_10,
+)
 from inference_pipelines.prompts.system_prompt import (
     ANNOTATION_SYSTEM_PROMPT,
     GENERATION_SYSTEM_PROMPT,
 )
-from inference_pipelines.prompts.generation_samples import GENERATION_SAMPLES_70_30
+from inference_pipelines.prompts.generation_samples import (
+    GENERATION_SAMPLES_70_30,
+    GENERATION_SAMPLES_00,
+    GENERATION_SAMPLES_80_20,
+    GENERATION_SAMPLES_90_10,
+)
 from inference_pipelines.prompts.generation_prompt_template import (
     GENERATION_PROMPT_TEMPLATE,
     FALLACY_DEFINITIONS,
@@ -69,9 +81,18 @@ def select_prompt(prompt_to_use: str, text: str, **kwargs) -> List[Dict[str, str
         List of message dictionaries in the format expected by the LLM
     """
     # Dictionary mapping prompt names to functions
+
     prompt_functions = {
         "annotation_prompt": annotation_prompt,
         "generation_prompt": generation_prompt,
+        "annotation_prompt_70_30": partial(annotation_prompt, split="70_30"),
+        "generation_prompt_70_30": partial(generation_prompt, split="70_30"),
+        "annotation_prompt_00": partial(annotation_prompt, split="00"),
+        "generation_prompt_00": partial(generation_prompt, split="00"),
+        "annotation_prompt_80_20": partial(annotation_prompt, split="80_20"),
+        "generation_prompt_80_20": partial(generation_prompt, split="80_20"),
+        "annotation_prompt_90_10": partial(annotation_prompt, split="90_10"),
+        "generation_prompt_90_10": partial(generation_prompt, split="90_10"),
     }
 
     if prompt_to_use not in prompt_functions:
@@ -84,7 +105,7 @@ def select_prompt(prompt_to_use: str, text: str, **kwargs) -> List[Dict[str, str
 
 
 # prompt to annotate fallacies in text
-def annotation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
+def annotation_prompt(text: str, split: str = None, **kwargs) -> List[Dict[str, str]]:
     """
     Create an annotation prompt with the guidelines and prompt template.
 
@@ -104,7 +125,16 @@ def annotation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
     content = content.replace("{{GUIDELINES}}", ANNOTATION_GUIDELINES)
 
     # replace few shot examples placeholder with few shot examples
-    content = content.replace("{{FEW_SHOT_EXAMPLES}}", FEW_SHOT_EXAMPLES)
+    if split == "70_30":
+        content = content.replace("{{FEW_SHOT_EXAMPLES}}", FEW_SHOT_EXAMPLES_70_30)
+    elif split == "00":
+        content = content.replace("{{FEW_SHOT_EXAMPLES}}", FEW_SHOT_EXAMPLES_00)
+    elif split == "80_20":
+        content = content.replace("{{FEW_SHOT_EXAMPLES}}", FEW_SHOT_EXAMPLES_80_20)
+    elif split == "90_10":
+        content = content.replace("{{FEW_SHOT_EXAMPLES}}", FEW_SHOT_EXAMPLES_90_10)
+    else:
+        content = content.replace("{{FEW_SHOT_EXAMPLES}}", FEW_SHOT_EXAMPLES)
 
     return [
         {"role": "system", "content": ANNOTATION_SYSTEM_PROMPT},
@@ -113,7 +143,7 @@ def annotation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
 
 
 # prompt to generate text with fallacies
-def generation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
+def generation_prompt(text: str, split: str = "70_30", **kwargs) -> List[Dict[str, str]]: # fmt: skip
     if isinstance(text, list):
         text = json.dumps(text)
 
@@ -121,9 +151,18 @@ def generation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
 
     # replace fallacy definitions placeholder with fallacy definitions
     content = prompt_template.replace("{{FALLACY_DEFINITIONS}}", FALLACY_DEFINITIONS)
-
+    # fmt: off
     # replace few shot samples placeholder with few shot samples
-    content = prompt_template.replace("{{FEW_SHOT_SAMPLES}}", GENERATION_SAMPLES_70_30)
+    if split == "70_30":
+        content = prompt_template.replace("{{FEW_SHOT_SAMPLES}}", GENERATION_SAMPLES_70_30)
+    elif split == "00":
+        content = prompt_template.replace("{{FEW_SHOT_SAMPLES}}", GENERATION_SAMPLES_00)
+    elif split == "80_20":
+        content = prompt_template.replace("{{FEW_SHOT_SAMPLES}}", GENERATION_SAMPLES_80_20)
+    elif split == "90_10":
+        content = prompt_template.replace("{{FEW_SHOT_SAMPLES}}", GENERATION_SAMPLES_90_10)
+    else:
+        pass
 
     # replace fallacies placeholder with fallacies
     content = content.replace("{{FALLACIES}}", text)
@@ -137,7 +176,7 @@ def generation_prompt(text: str, **kwargs) -> List[Dict[str, str]]:
     ]
 
 
-# ===== Inference Task Classes =====
+# ===== Inference Task Classes ===== Change nothing below here ===== #
 
 
 @dataclass
@@ -719,6 +758,12 @@ def main():
         required=True,
         help="Path to save result dataset. Overrides config value if provided.",
     )
+    parser.add_argument(
+        "--prompt",
+        type=str,
+        required=True,
+        help="Prompt to use for inference. Overrides config value if provided.",
+    )
     args = parser.parse_args()
 
     # Create logs directory if it doesn't exist
@@ -739,6 +784,8 @@ def main():
         config["input_dataset_path"] = args.input_dataset_path
     if args.result_dataset_path:
         config["result_dataset_path"] = args.result_dataset_path
+    if args.prompt:
+        config["prompt"] = args.prompt
 
     # Check required config values
     required_fields = [

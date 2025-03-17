@@ -1,6 +1,5 @@
 data_annotation:
   # annotation  specific configs
-  prompt: annotation_prompt
   text_column_name: "text"
   generation_column_name: "response"
   # llm generation configs
@@ -27,7 +26,6 @@ convert_llm_response_to_span_annotations:
 
 
 data_generation:
-  prompt: generation_prompt
   text_column_name: "text"
   generation_column_name: "generated_text"
   # llm generation configs

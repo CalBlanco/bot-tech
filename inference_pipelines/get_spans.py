@@ -126,7 +126,8 @@ def process_dataset(config):
     gen_col = config["generation_column_name"]
     span_col = config["span_annotations_column_name"]
     labels = config["labels"]
-
+    df[span_col] = json.dumps([])
+    df[gen_col] = df[gen_col].fillna("")
     # Process each row
     for idx, row in df.iterrows():
         # Get the text with annotations

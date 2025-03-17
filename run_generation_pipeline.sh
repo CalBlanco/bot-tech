@@ -2,6 +2,8 @@
 
 # Input files
 INPUT_FILE="generation_inputs/generate_200_samples.csv"
+GENERATION_PROMPT="generation_prompt_80_20" # "generation_prompt_70_30",  "generation_prompt_00", "generation_prompt_80_20", "generation_prompt_90_10"
+GENERATION_DATASET="generation_inputs_80_20"
 
 # Directory paths
 GENERATION_INPUTS_DIR="generation_inputs"
@@ -9,9 +11,8 @@ GENERATION_OUTPUTS_DIR="generation_outputs"
 INFERENCE_PIPELINES_DIR="inference_pipelines"
 
 # Dataset paths
-GENERATION_DATASET="generation_inputs_70_30_v3"
 DATASET_PATH="datasets/${GENERATION_DATASET}"
-OUTPUT_FILE="${GENERATION_OUTPUTS_DIR}/${GENERATION_DATASET}.jsonl"
+OUTPUT_FILE="${GENERATION_OUTPUTS_DIR}/${GENERATION_DATASET}.csv"
 
 # Config files
 CONFIG_FILE="${INFERENCE_PIPELINES_DIR}/inference_configs.yaml"
@@ -20,7 +21,7 @@ CONFIG_FILE="${INFERENCE_PIPELINES_DIR}/inference_configs.yaml"
 python ${INFERENCE_PIPELINES_DIR}/dataset_conversion.py --input_path ${INPUT_FILE} --output_path ${DATASET_PATH}
 
 # run the inference engine on the hf dataset and add a new column with the llm responses
-python -m inference_pipelines.inference_engine --input-dataset-path ${DATASET_PATH} --result-dataset-path ${DATASET_PATH} --section data_generation --config ${CONFIG_FILE}
+python -m inference_pipelines.inference_engine --input-dataset-path ${DATASET_PATH} --result-dataset-path ${DATASET_PATH} --section data_generation --config ${CONFIG_FILE} --prompt ${GENERATION_PROMPT}
 
 # convert the hf dataset into a .csv or .jsonl
 python ${INFERENCE_PIPELINES_DIR}/dataset_conversion.py --input_path ${DATASET_PATH} --output_path ${OUTPUT_FILE}
